@@ -1,0 +1,23 @@
+{
+	"id": "nodebb-plugin-sso-id-sus",
+	"name": "NodeBB ID SUS SSO",
+	"description": "NodeBB Plugin that allows users to login/register via ID SUS OAuth.",
+	"url": "https://github.com/",
+	"library": "./library.js",
+	"hooks": [
+		{ "hook": "filter:admin.header.build", "method": "addMenuItem" },
+		{ "hook": "filter:auth.list", "method": "getAssociation" },
+		{ "hook": "filter:auth.init", "method": "getStrategy" },
+		{ "hook": "static:app.load", "method": "init" }
+	],
+	"staticDirs": {
+		"static": "./static"
+	},
+	"templates": "./templates",
+	"scripts": [
+		"static/lib/main.js"
+	],
+	"acpScripts": [
+		"static/lib/admin.js"
+	]
+}

@@ -1,0 +1,3 @@
+Logado
+{{data}}
+{{query}}
