@@ -1,229 +1,235 @@
-
 (function(module) {
-	"use strict";
+  'use strict';
+  /* globals module, require */
 
-	var User = module.parent.require('./user'),
-		db = module.parent.require('./database'),
-		meta = module.parent.require('./meta'),
-		nconf = module.parent.require('nconf'),
-		identSUS = require('id-sus-sdk-nodejs'),
-		async = module.parent.require('async'),
-		passport = module.parent.require('passport'),
-		request = module.parent.require('request'),
-		Auth0Strategy = require('passport-auth0').Strategy,
-		authenticationController = module.parent.require('./controllers/authentication'),
-		IdSus = {},
-		constants;
+  var User = module.parent.require('./user'),
+    meta = module.parent.require('./meta'),
+    db = module.parent.require('../src/database'),
+    passport = module.parent.require('passport'),
+    IdsusStrategy = require('passport-idsus').Strategy,
+    nconf = module.parent.require('nconf'),
+    async = module.parent.require('async'),
+    winston = module.parent.require('winston');
 
-	constants = Object.freeze({
-		'name': "ID SUS",
-		'admin': {
-			'icon': 'fa-user-md',
-			'route': '/plugins/sso-id-sus'
-		}
-	});
+  var authenticationController = module.parent.require('./controllers/authentication');
 
+  var constants = Object.freeze({
+    'name': 'ID SUS',
+    'admin': {
+      'icon': 'fa-user-md',
+      'route': '/plugins/sso-id-sus'
+    }
+  });
 
-	IdSus.getStrategy = function(strategies, callback) {
-		meta.settings.get('sso-id-sus', function(err, settings) {
-			if (err || !settings.id || !settings.secret || !settings.domain) {
-				var msg = err ? err : 'AUTH0 ERROR: id, secret, and domain are required.';
-				return callback(msg);
-			}
+  var Idsus = {
+    settings: undefined
+  };
 
-			var config = {
-				client_id: settings.id,
-				client_secret: settings.secret,
-				auth_host: settings.domain,
-				redirect_uri: nconf.get('url') + '/auth/sso-id-sus/callback' 
-			}
+  Idsus.init = function(params, callback) {
+    function render(req, res) {
+      res.render('admin/plugins/sso-id-sus', {});
+    }
 
-			var idSus = identSUS(config)
-			console.log(idSus.getUrlCode())
-			console.log(nconf.get('url') + '/auth/sso-id-sus/callback')
+    params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
+    params.router.get('/api/admin/plugins/sso-id-sus', render);
 
-			strategies.push({
-				name: 'sso-id-sus',
-				url: idSus.getUrlCode(),
-				callbackURL: nconf.get('url') + '/auth/sso-id-sus/callback',
-				icon: constants.admin.icon,
-				scope: 'user:email'
-			});
+    callback();
+  };
 
-			
+  Idsus.getSettings = function(callback) {
+    if (Idsus.settings) {
+      return callback();
+    }
 
-			callback(null, strategies);
-		});
+    meta.settings.get('sso-id-sus', function(err, settings) {
+      Idsus.settings = settings;
+      callback();
+    });
+  }
 
-	};
+  Idsus.getStrategy = function(strategies, callback) {
+    if (!Idsus.settings) {
+      return Idsus.getSettings(function() {
+        Idsus.getStrategy(strategies, callback);
+      });
+    }
 
-	IdSus.getAssociation = function(data, callback) {
-		console.log('----- getAssociation -----');
-		User.getUserField(data.uid, 'auth0id', function(err, auth0id) {
-			if (err) {
-				return callback(err, data);
-			}
+    if (
+      Idsus.settings !== undefined && Idsus.settings.hasOwnProperty('id') && Idsus.settings.id && Idsus.settings.hasOwnProperty('secret') && Idsus.settings.secret && Idsus.settings.hasOwnProperty('domain') && Idsus.settings.domain
+    ) {
+      passport.use(new IdsusStrategy({
+        clientID: Idsus.settings.id,
+        clientSecret: Idsus.settings.secret,
+        callbackURL: nconf.get('url') + '/auth/idsus/callback',
+        host: Idsus.settings.domain
+      }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done) {
 
-			if (auth0id) {
-				data.associations.push({
-					associated: true,
-					name: constants.name,
-					icon: constants.admin.icon
-				});
-			} else {
-				data.associations.push({
-					associated: false,
-					url: nconf.get('url') + '/auth/auth0',
-					name: constants.name,
-					icon: constants.admin.icon
-				});
-			}
+        function success(uid) {
+          done(null, {
+            uid: uid
+          });
+        }
 
-			callback(null, data);
-		})
-	};
+        User.getUidByEmail(user.email, function(err, uid) {
+          console.log('------uid-----')
+          console.log(uid)
+          console.log('------uid-----')
+          if (!uid) {
+            console.log('Sem uid (Criar User)')
+            User.create({ username: user.email.split('@')[0], email: user.email }, function(err, uid) {
+              if (err !== null) {
+                callback(err);
+              } else {
+                success(uid, data);
+              }
+            });
+          } else {
+            console.log('Com uid' + uid)
+            success(uid)
+          }
+        });
 
-	IdSus.addMenuItem = function(custom_header, callback) {
-		custom_header.authentication.push({
-			"route": constants.admin.route,
-			"icon": constants.admin.icon,
-			"name": constants.name
-		});
+      }));
 
-		callback(null, custom_header);
-	};
+      strategies.push({
+        name: 'idsus',
+        url: '/auth/idsus',
+        callbackURL: '/auth/idsus/callback',
+        icon: constants.admin.icon
+      });
+    }
 
+    callback(null, strategies);
+  };
 
+  // Facebook.getAssociation = function(data, callback) {
+  //   user.getUserField(data.uid, 'fbid', function(err, fbId) {
+  //     if (err) {
+  //       return callback(err, data);
+  //     }
 
-	IdSus.init = function(params, callback) {
+  //     if (fbId) {
+  //       data.associations.push({
+  //         associated: true,
+  //         url: 'https://facebook.com/' + fbId,
+  //         name: constants.name,
+  //         icon: constants.admin.icon
+  //       });
+  //     } else {
+  //       data.associations.push({
+  //         associated: false,
+  //         url: nconf.get('url') + '/auth/facebook',
+  //         name: constants.name,
+  //         icon: constants.admin.icon
+  //       });
+  //     }
 
-		var router = params.router;
-		var middleware = params.middleware;
+  //     callback(null, data);
+  //   })
+  // };
 
-		function renderAdmin(req, res) {
-			res.render('admin/plugins/sso-id-sus', {
-				callbackURL: nconf.get('url') + '/auth/sso-id-sus/callback'
-			});
-		}
+  // Facebook.storeTokens = function(uid, accessToken, refreshToken) {
+  //   //JG: Actually save the useful stuff
+  //   winston.info("Storing received fb access information for uid(" + uid + ") accessToken(" + accessToken + ") refreshToken(" + refreshToken + ")");
+  //   user.setUserField(uid, 'fbaccesstoken', accessToken);
+  //   user.setUserField(uid, 'fbrefreshtoken', refreshToken);
+  // };
 
-		function loginSus(req, res, next){
-			meta.settings.get('sso-id-sus', function(err, settings) {
-				
+  // Facebook.login = function(fbid, name, email, picture, accessToken, refreshToken, profile, callback) {
 
-				var config = {
-					client_id: settings.id,
-					client_secret: settings.secret,
-					auth_host: settings.domain,
-					redirect_uri: nconf.get('url') + '/auth/sso-id-sus/callback' 
-				}
+  //   winston.verbose("Facebook.login fbid, name, email, picture: " + fbid + ", " + ", " + name + ", " + email + ", " + picture);
 
-				var idSus = identSUS(config)
+  //   Facebook.getUidByFbid(fbid, function(err, uid) {
+  //     if (err) {
+  //       return callback(err);
+  //     }
 
-				function updateUser(req, res, uid, data){
-					console.log(req.user)
-					console.log(uid)
-					console.log('user:' + uid)
-					console.log(data)
-					req.user = {username: data.email.split('@')[0], email: data.email, uid: uid}
-					User.setUserField(req.user.uid, 'idsus', uid);
-					db.setObjectField('user:' + uid, 'susconnecta', data);
-					authenticationController.onSuccessfulLogin(req, uid);
+  //     if (uid !== null) {
+  //       // Existing User
 
-					res.redirect(nconf.get('url'));	
-					
-				}
+  //       Facebook.storeTokens(uid, accessToken, refreshToken);
 
-				idSus.getAccessToken(req.query.code, function(err, data){
-					idSus.getScopes(data.access_token, data.scope, function(err,data){
-						User.getUidByEmail(data.email, function(err, uid) {
-							console.log('------uid-----')
-							console.log(uid)
-							console.log('------uid-----')
-							if (!uid) {
-								console.log('Sem uid (Criar User)')
-								User.create({username: data.email.split('@')[0], email: data.email}, function(err, uid) {
-									if (err !== null) {
-										callback(err);
-									} else {
-										updateUser(req, res, uid, data);
-									}
-								});
-							} else {
-								console.log('Com uid' + uid)
-								updateUser(req, res, uid, data)
-							}
-						});
+  //       callback(null, {
+  //         uid: uid
+  //       });
+  //     } else {
+  //       // New User
+  //       var success = function(uid) {
+  //         // Save facebook-specific information to the user
+  //         user.setUserField(uid, 'fbid', fbid);
+  //         db.setObjectField('fbid:uid', fbid, uid);
+  //         var autoConfirm = Facebook.settings && Facebook.settings.autoconfirm === "on" ? 1 : 0;
+  //         user.setUserField(uid, 'email:confirmed', autoConfirm);
 
-					})
-				})
+  //         // Save their photo, if present
+  //         if (picture) {
+  //           user.setUserField(uid, 'uploadedpicture', picture);
+  //           user.setUserField(uid, 'picture', picture);
+  //         }
 
-				
-			})
-		}
+  //         Facebook.storeTokens(uid, accessToken, refreshToken);
 
+  //         callback(null, {
+  //           uid: uid
+  //         });
+  //       };
 
+  //       user.getUidByEmail(email, function(err, uid) {
+  //         if (err) {
+  //           return callback(err);
+  //         }
 
-		function refreshToken(req, res) {
-			if('exprire_id' < 'date_now'){
-				meta.settings.get('sso-id-sus', function(err, settings) {
-				
-					var config = {
-						client_id: settings.id,
-						client_secret: settings.secret,
-						auth_host: settings.domain,
-						redirect_uri: nconf.get('url') + '/auth/sso-id-sus/callback' 
-					}
+  //         if (!uid) {
+  //           user.create({ username: name, email: email }, function(err, uid) {
+  //             if (err) {
+  //               return callback(err);
+  //             }
 
-					var idSus = identSUS(config)
+  //             success(uid);
+  //           });
+  //         } else {
+  //           success(uid); // Existing account -- merge
+  //         }
+  //       });
+  //     }
+  //   });
+  // };
 
-					idSus.revokeToken('access_token', function(err, data){
-						idSus.refreshToken(refresh_token, function(err, data){
-							/*
-							data = { 	
-								access_token: 'vvOqVxAU1uLY1t5iFUqqRqDGqz7ORJ',
-								token_type: 'Bearer',
-								expires_in: Thu Mar 31 2016 00:55:19 GMT+0000 (UTC),
-								refresh_token: 'azKukSlyP3Hm6670SQ30xmxEPk4FZP',
-								scope: [ 'conselhos', 'cpf', 'dados_publicos', 'email' ] 
-							}
-							*/
+  // Facebook.getUidByFbid = function(fbid, callback) {
+  //   db.getObjectField('fbid:uid', fbid, function(err, uid) {
+  //     if (err) {
+  //       return callback(err);
+  //     }
+  //     callback(null, uid);
+  //   });
+  // };
 
-						});
-					});
-				})
-			};
-		}
+  Idsus.addMenuItem = function(custom_header, callback) {
+    custom_header.authentication.push({
+      'route': constants.admin.route,
+      'icon': constants.admin.icon,
+      'name': constants.name
+    });
 
-		function logoutCallback(req, res) {
-			meta.settings.get('sso-id-sus', function(err, settings) {
-				
-				var config = {
-					client_id: settings.id,
-					client_secret: settings.secret,
-					auth_host: settings.domain,
-					redirect_uri: nconf.get('url') + '/auth/sso-id-sus/callback' 
-				}
+    callback(null, custom_header);
+  };
 
-				var idSus = identSUS(config)
+  // Facebook.deleteUserData = function(data, callback) {
+  //   var uid = data.uid;
 
-				idSus.revokeToken('access_token', function(err, data){
+  //   async.waterfall([
+  //     async.apply(user.getUserField, uid, 'fbid'),
+  //     function(oAuthIdToDelete, next) {
+  //       db.deleteObjectField('fbid:uid', oAuthIdToDelete, next);
+  //     }
+  //   ], function(err) {
+  //     if (err) {
+  //       winston.error('[sso-facebook] Could not remove OAuthId data for uid ' + uid + '. Error: ' + err);
+  //       return callback(err);
+  //     }
+  //     callback(null, uid);
+  //   });
+  // };
 
-					res.render('/', {logoutFlag: true});
-				})
-			})
-		}
-
-		
-		router.get('/auth/sso-id-sus/callback',  middleware.applyCSRF, loginSus);
-		router.get('/api/auth/sso-id-sus/callback', middleware.applyCSRF, loginSus);
-
-		router.get('/admin/plugins/sso-id-sus', middleware.admin.buildHeader, renderAdmin);
-		router.get('/api/admin/plugins/sso-id-sus', renderAdmin);
-		router.get('/auth/sso-id-sus/logout/callback', logoutCallback);
-
-		callback();
-		//https://login.susconecta.org.br/oauth/authorize/?state=random_state_string&client_id=uZNmqYfUuI6DQQ3NVmDPx8kHHQPuFKABeScX4FPU&response_type=code
-	};
-
-	module.exports = IdSus;
+  module.exports = Idsus;
 }(module));
