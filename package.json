@@ -45,6 +45,7 @@
   "dependencies": {
     "passport-auth0": "^0.5.0",
     "auth0-lock": "latest",
+    "passport-idsus": "https://github.com/ABS-org/passport-idsus.git",
     "id-sus-sdk-nodejs": "git+http://idsus-publico:idsus-publicoidsus-publico@git.lais.huol.ufrn.br/id-sus/id-sus-sdk-nodejs.git"
   },
   "nbbpm": {
