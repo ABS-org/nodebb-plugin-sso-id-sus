@@ -37,6 +37,10 @@
 		</div>
 		<form class="sso-id-sus-settings">
 			<div class="form-group">
+				<label for="secret">Base URL</label>
+				<input type="text" name="baseUrl" title="Base Url" class="form-control" placeholder="Base Url">
+			</div>
+			<div class="form-group">
 				<label for="domain">Domain</label>
 				<input type="text" name="domain" title="Domain" class="form-control" placeholder="Domain">
 			</div>

@@ -62,7 +62,7 @@
       passport.use(new IdsusStrategy({
         clientID: Idsus.settings.id,
         clientSecret: Idsus.settings.secret,
-        callbackURL: nconf.get('url') + '/auth/idsus/callback',
+        callbackURL: Idsus.settings.baseUrl + '/auth/idsus/callback',
         host: Idsus.settings.domain
       }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done) {
 
