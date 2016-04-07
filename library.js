@@ -78,7 +78,7 @@
               if (err !== null) {
                 callback(err);
               } else {
-                success(uid, data);
+                success(uid);
               }
             });
           } else {
