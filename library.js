@@ -27,7 +27,9 @@
 
   Idsus.init = function(params, callback) {
     function render(req, res) {
-      res.render('admin/plugins/sso-id-sus', {});
+      res.render('admin/plugins/sso-id-sus', {
+        callbackURL: nconf.get('url') + '/auth/idsus/callback'
+      });
     }
 
     params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
@@ -71,11 +73,7 @@
         }
 
         User.getUidByEmail(user.email, function(err, uid) {
-          console.log('------uid-----')
-          console.log(uid)
-          console.log('------uid-----')
           if (!uid) {
-            console.log('Sem uid (Criar User)')
             User.create({ username: user.email.split('@')[0], email: user.email }, function(err, uid) {
               if (err !== null) {
                 callback(err);
