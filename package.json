@@ -43,10 +43,11 @@
   "readme": "",
   "readmeFilename": "README.md",
   "dependencies": {
-    "passport-auth0": "^0.5.0",
     "auth0-lock": "latest",
+    "id-sus-sdk-nodejs": "git+http://idsus-publico:idsus-publicoidsus-publico@git.lais.huol.ufrn.br/id-sus/id-sus-sdk-nodejs.git",
+    "passport-auth0": "^0.5.0",
     "passport-idsus": "https://github.com/ABS-org/passport-idsus.git",
-    "id-sus-sdk-nodejs": "git+http://idsus-publico:idsus-publicoidsus-publico@git.lais.huol.ufrn.br/id-sus/id-sus-sdk-nodejs.git"
+    "request": "^2.71.0"
   },
   "nbbpm": {
     "compatibility": "^0.9.0 || ^1.0.0"

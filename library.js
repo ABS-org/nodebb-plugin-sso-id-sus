@@ -1,3 +1,5 @@
+
+
 (function(module) {
   'use strict';
   /* globals module, require */
@@ -9,7 +11,10 @@
     IdsusStrategy = require('passport-idsus').Strategy,
     nconf = module.parent.require('nconf'),
     async = module.parent.require('async'),
-    winston = module.parent.require('winston');
+    winston = module.parent.require('winston'),
+    fs = require('fs'),
+    path = require('path'),
+    request = require('request');
 
   var authenticationController = module.parent.require('./controllers/authentication');
 
@@ -74,15 +79,36 @@
 
         User.getUidByEmail(user.email, function(err, uid) {
           if (!uid) {
-            User.create({ username: user.email.split('@')[0], email: user.email }, function(err, uid) {
+            console.log('----LOGIN----')
+            console.log(user)
+            User.create({ username: user.email.split('@')[0], email: user.email, fullname: user.name }, function(err, uid) {
               if (err !== null) {
                 callback(err);
               } else {
-                success(uid);
+
+                var url = 'https://login.susconecta.org.br' + user.avatar;
+                var extname = path.extname(url).substring(1);
+
+                if (['png', 'jpeg', 'jpg', 'gif'].indexOf(extname) === -1) {
+                  success(uid)
+                }
+
+                var r = request(url)
+
+                r.on('response', function (resp) {
+                  if(resp.statusCode == 200){
+                    //Write image file
+                    resp.pipe(fs.createWriteStream('./public/uploads/profile/' + uid + '-profileimg.jpg'));
+                    //Add to User profile
+                    User.setUserField(uid, 'uploadedpicture', '/uploads/profile/' + uid + '-profileimg.jpg');
+                    User.setUserField(uid, 'picture', '/uploads/profile/' + uid + '-profileimg.jpg');    
+                  }
+                  success(uid)
+                })
+  
               }
             });
           } else {
-            console.log('Com uid' + uid)
             success(uid)
           }
         });
