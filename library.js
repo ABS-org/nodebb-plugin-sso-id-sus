@@ -68,7 +68,7 @@
         clientID: Idsus.settings.id,
         clientSecret: Idsus.settings.secret,
         callbackURL: Idsus.settings.baseUrl + '/auth/idsus/callback',
-        host: Idsus.settings.domain
+        authURL: Idsus.settings.domain
       }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done) {
 
         function success(uid) {
