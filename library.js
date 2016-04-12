@@ -79,8 +79,7 @@
 
         User.getUidByEmail(user.email, function(err, uid) {
           if (!uid) {
-            console.log('----LOGIN----')
-            console.log(user)
+
             User.create({ username: user.email.split('@')[0], email: user.email, fullname: user.name }, function(err, uid) {
               if (err !== null) {
                 callback(err);
