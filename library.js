@@ -85,6 +85,10 @@
                 callback(err);
               } else {
 
+                if(user.avatar == null){
+                  success(uid)
+                }
+
                 var url = 'https://login.susconecta.org.br' + user.avatar;
                 var extname = path.extname(url).substring(1);
 
