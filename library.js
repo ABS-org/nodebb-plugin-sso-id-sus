@@ -5,9 +5,13 @@
   /* globals module, require */
 
   var User = module.parent.require('./user'),
+    plugins = module.parent.require('./plugins'),
     meta = module.parent.require('./meta'),
     db = module.parent.require('../src/database'),
+    utils = module.parent.require('../public/src/utils'),
     passport = module.parent.require('passport'),
+    IdentSus = require('id-sus-sdk-nodejs'),
+    _ = require('underscore'),
     IdsusStrategy = require('passport-idsus').Strategy,
     nconf = module.parent.require('nconf'),
     async = module.parent.require('async'),
@@ -37,8 +41,63 @@
       });
     }
 
+    function cookieAuth(req, res){
+      var config = {
+        client_id: Idsus.settings.id,
+        client_secret: Idsus.settings.secret,
+        redirect_uri: Idsus.settings.baseUrl + '/auth/idsus/callback',
+        auth_host: Idsus.settings.domain
+      };
+
+      var IdentSusCfg = IdentSus(config)
+
+      if(req.cookies['__susconecta']){
+        if(req.user){
+          res.status(200).json({});
+        }else{
+          var cookieSusConecta = JSON.parse(req.cookies['__susconecta']);
+          var identOpt = {origin: 'cookie', sessionid: cookieSusConecta.SID}
+
+          IdentSusCfg.getTokenAndScopes(identOpt, function (err, body) {
+            if(err){
+              res.status(200).json({});
+            }
+            
+            var userScope = body.scopeObj;
+
+            User.getUidByEmail(userScope.email, function(err, uid) {
+              req.login({uid: uid}, function(err) {
+                if (err) {
+                  return callback(err);
+                }
+
+                res.status(200).json({});  
+              });
+
+            })
+          })
+        }
+      }else{
+        if(req.user){
+          User.auth.revokeSession(req.sessionID, req.user.uid, function(err) {
+            if (err) {
+              res.status(200).json({});
+            }
+            req.logout();
+            res.status(200).json({});
+          });
+        }else{
+          res.status(200).json({});  
+        }
+        
+      }
+    
+    }
+
     params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
     params.router.get('/api/admin/plugins/sso-id-sus', render);
+
+    params.router.get('/auth/idsus/cookie.js', cookieAuth);
 
     callback();
   };
@@ -64,13 +123,14 @@
     if (
       Idsus.settings !== undefined && Idsus.settings.hasOwnProperty('id') && Idsus.settings.id && Idsus.settings.hasOwnProperty('secret') && Idsus.settings.secret && Idsus.settings.hasOwnProperty('domain') && Idsus.settings.domain
     ) {
+
+
       passport.use(new IdsusStrategy({
         clientID: Idsus.settings.id,
         clientSecret: Idsus.settings.secret,
         callbackURL: Idsus.settings.baseUrl + '/auth/idsus/callback',
         authURL: Idsus.settings.domain
-      }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done) {
-
+      }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done, err) {
         function success(uid) {
           done(null, {
             uid: uid
