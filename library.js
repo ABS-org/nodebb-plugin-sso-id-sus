@@ -46,7 +46,8 @@
         client_id: Idsus.settings.id,
         client_secret: Idsus.settings.secret,
         redirect_uri: Idsus.settings.baseUrl + '/auth/idsus/callback',
-        auth_host: Idsus.settings.domain
+        login_url: Idsus.settings.loginURL,
+        api_url: Idsus.settings.apiURL,
       };
 
       var IdentSusCfg = IdentSus(config)
@@ -121,15 +122,16 @@
     }
 
     if (
-      Idsus.settings !== undefined && Idsus.settings.hasOwnProperty('id') && Idsus.settings.id && Idsus.settings.hasOwnProperty('secret') && Idsus.settings.secret && Idsus.settings.hasOwnProperty('domain') && Idsus.settings.domain
+      Idsus.settings !== undefined && Idsus.settings.hasOwnProperty('id') && Idsus.settings.id && Idsus.settings.hasOwnProperty('secret') && Idsus.settings.secret && Idsus.settings.hasOwnProperty('loginURL') && Idsus.settings.loginURL && Idsus.settings.hasOwnProperty('apiURL') && Idsus.settings.apiURL 
     ) {
-
+      console.log(Idsus.settings)
 
       passport.use(new IdsusStrategy({
         clientID: Idsus.settings.id,
         clientSecret: Idsus.settings.secret,
         callbackURL: Idsus.settings.baseUrl + '/auth/idsus/callback',
-        authURL: Idsus.settings.domain
+        loginURL: Idsus.settings.loginURL,
+        apiURL: Idsus.settings.apiURL,
       }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done, err) {
         function success(uid) {
           done(null, {
