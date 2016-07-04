@@ -34,6 +34,32 @@
     settings: undefined
   };
 
+  Idsus.loggedOut = function(data){
+    var config = {
+      client_id: Idsus.settings.id,
+      client_secret: Idsus.settings.secret,
+      redirect_uri: Idsus.settings.baseUrl + '/auth/idsus/callback',
+      login_url: Idsus.settings.loginURL,
+      api_url: Idsus.settings.apiURL,
+    };
+
+    var IdentSusCfg = IdentSus(config)
+
+    if(data.req.cookies['__susconecta']){
+      var cookieSusConecta = JSON.parse(data.req.cookies['__susconecta']);
+
+      IdentSusCfg.logout(cookieSusConecta, function (err, body) {
+        if(err){
+          res.status(200).json({});  
+        }
+
+        res.status(200).json({});  
+
+      })
+    }
+
+  };
+
   Idsus.init = function(params, callback) {
     function render(req, res) {
       res.render('admin/plugins/sso-id-sus', {
@@ -49,19 +75,31 @@
         login_url: Idsus.settings.loginURL,
         api_url: Idsus.settings.apiURL,
       };
+      
+      res.set('Content-Type', 'text/javascript');
 
       var IdentSusCfg = IdentSus(config)
+      console.log(config.login_url + "/base/setcookies" )
+
+      request(config.login_url + "/base/setcookies", function (error, response, body) {
+        console.log(error);
+        console.log(response);
+        console.log(body);
+        if (!error && response.statusCode == 200) {
+          console.log(body);
+        }
+      })
 
       if(req.cookies['__susconecta']){
         if(req.user){
-          res.status(200).json({});
+          res.status(200).json({reload: false});
         }else{
           var cookieSusConecta = JSON.parse(req.cookies['__susconecta']);
           var identOpt = {origin: 'cookie', sessionid: cookieSusConecta.SID}
 
           IdentSusCfg.getTokenAndScopes(identOpt, function (err, body) {
             if(err){
-              res.status(200).json({});
+              return callback(err);
             }
             
             var userScope = body.scopeObj;
@@ -72,7 +110,7 @@
                   return callback(err);
                 }
 
-                res.status(200).json({});  
+                res.status(200).json({reload: true});
               });
 
             })
@@ -82,23 +120,58 @@
         if(req.user){
           User.auth.revokeSession(req.sessionID, req.user.uid, function(err) {
             if (err) {
-              res.status(200).json({});
+              res.status(200).json({reload: false});
             }
             req.logout();
-            res.status(200).json({});
+            res.status(200).json({reload: true});
           });
         }else{
-          res.status(200).json({});  
+          res.status(200).json({reload: false});
         }
         
       }
     
     }
 
+
+    function userParticipation(req, res){
+
+      function validateEmail(email) {
+        var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(email);
+      }
+
+      if(req.params.email === undefined){
+        return res.status(422).json({error: {email: 'blank'}});
+      }
+
+      if(!validateEmail(req.params.email)){
+        return res.status(422).json({error: {email: 'invalid'}});
+      }
+
+      User.getUidByEmail(req.params.email, function(err, uid) {
+        var cursor = db.client.collection('objects').find({uid: 1,  _key: { $in: [ /^topic/, /^post/ ] } })
+
+        var content = { total: 0, data: []};
+
+        cursor.each(function(err, doc) {
+          if (doc != null) {
+            content.total += 1; 
+            content.data.push(doc);
+          } else {
+            return res.status(200).json(content);
+          }
+       });
+
+      })
+
+    }
+
     params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
     params.router.get('/api/admin/plugins/sso-id-sus', render);
 
     params.router.get('/auth/idsus/cookie.js', cookieAuth);
+    params.router.get('/api/user/interactions/:email', userParticipation);
 
     callback();
   };
