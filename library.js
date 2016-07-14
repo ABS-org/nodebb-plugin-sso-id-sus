@@ -150,7 +150,7 @@
       }
 
       User.getUidByEmail(req.params.email, function(err, uid) {
-        var cursor = db.client.collection('objects').find({uid: 1,  _key: { $in: [ /^topic/, /^post/ ] } })
+        var cursor = db.client.collection('objects').find({uid: uid,  _key: { $in: [ /^topic/, /^post/ ] } })
 
         var content = { total: 0, data: []};
 
@@ -167,11 +167,92 @@
 
     }
 
+    function categories(req, res){
+        var cursor = db.client.collection('objects').find({ _key: { $in: [ /^category/ ] } })
+
+        var content = { total: 0, data: []};
+        var data = []
+
+        cursor.each(function(err, doc) {
+          if (doc != null) {
+            content.total += 1; 
+            data.push(doc);
+          } else {
+            for (var i = 0; i < data.length; i++) {
+              content.data.push({
+                name: data[i].name,
+                description: data[i].description,
+                url: nconf.get('url') + "category/" + data[i].slug
+              })
+            }
+            return res.status(200).json(content);
+          }
+       });
+    }
+
+
+    function unreadNotifications(req, res){
+      function validateEmail(email) {
+        var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(email);
+      }
+
+      if(req.params.email === undefined){
+        return res.status(422).json({error: {email: 'blank'}});
+      }
+
+      if(!validateEmail(req.params.email)){
+        return res.status(422).json({error: {email: 'invalid'}});
+      }
+
+      User.getUidByEmail(req.params.email, function(err, uid) {
+        var cursor_unread = db.client.collection('objects').find({ _key: 'uid:' + uid + ':notifications:unread' });
+        var unread_notifications = [];
+        var notification_key = [];
+        var notification_obj = [];
+        var results = {total: 0, data: [] };
+        var i;
+
+        cursor_unread.each(function(err, unread_doc) {
+          if (unread_doc != null) {
+            unread_notifications.push(unread_doc);
+          } else {
+            for (i = 0; i < unread_notifications.length; i++) {
+              notification_key.push('notifications:' + unread_notifications[i].value)
+            }
+            
+            unread_notifications = db.client.collection('objects').find({ _key: { $in: notification_key } });
+
+            unread_notifications.each(function(err, unread_doc) {
+              if (unread_doc != null) {
+                results.total++
+                notification_obj.push(unread_doc)
+              }else{
+                for (i = 0; i < notification_obj.length; i++) {
+                  results.data.push({
+                    message: notification_obj[i].bodyShort,
+                    url: nconf.get('url') + notification_obj[i].path.substring(1)
+                  })
+                }
+
+                return res.status(200).json(results);
+              }
+            })
+
+          }
+        })
+
+      })
+    }
+
     params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
     params.router.get('/api/admin/plugins/sso-id-sus', render);
 
     params.router.get('/auth/idsus/cookie.js', cookieAuth);
     params.router.get('/api/user/interactions/:email', userParticipation);
+    params.router.get('/api/user/notifications/:email', unreadNotifications);
+    params.router.get('/api/categories', categories);
+    
 
     callback();
   };
