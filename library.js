@@ -192,6 +192,67 @@
 
 
     function unreadNotifications(req, res){
+      function renderMessage(message){
+        var i, j, message_text, 
+            message_obj = {
+              'notifications:new_message_from': "Nova mensagem de <strong>%1</strong>",
+              'notifications:outgoing_link': "Link Externo",
+              'notifications:upvoted_your_post_in': "<strong>%1</strong> deu voto positivo para seu post em <strong>%2</strong>.",
+              'notifications:upvoted_your_post_in_dual': "<strong>%1</strong> e <strong>%2</strong> deram voto positivo ao seu post em <strong>%3</strong>.",
+              'notifications:upvoted_your_post_in_multiple': "<strong>%1</strong> e %2 outros deram voto positivo ao seu post em <strong>%3</strong>.",
+              'notifications:user_started_following_you': "<strong>%1</strong> começou a seguir você.",
+              'notifications:user_started_following_you_dual': "<strong>%1</strong> e <strong>%2</strong> começaram a lhe acompanhar.",
+              'notifications:user_started_following_you_multiple': "<strong>%1</strong> e %2 outros começaram a lhe acompanhar.",
+              'notifications:user_posted_to': "<strong>%1</strong> postou uma resposta para: <strong>%2</strong>",
+              'notifications:user_posted_to_dual': "<strong>%1</strong> e <strong>%2</strong> postaram respostas para: <strong>%3</strong>",
+              'notifications:user_posted_to_multiple': "<strong>%1</strong> e %2 outros postaram respostas para: <strong>%3</strong>",
+              'notifications:user_posted_topic': "<strong>%1</strong> postou um novo tópico: <strong>%2</strong>",
+              'notifications:user_flagged_post_in': "<strong>%1</strong> sinalizou um post em <strong>%2</strong>",
+              'notifications:user_flagged_post_in_dual': "<strong>%1</strong> e <strong>%2</strong> sinalizaram um post em <strong>%3</strong>",
+              'notifications:user_flagged_post_in_multiple': "<strong>%1</strong> e %2 outros sinalizaram um post em <strong>%3</strong>"
+            };
+ 
+        message = message.replace(/\[/g, ']')
+        message = message.split("]")
+
+        for (i = message.length - 1; i >= 0; i--) {
+          if(message[i].indexOf("notifications") != 0){
+            message.splice(i, 1);
+          }else{
+            message[i] = message[i].split(',')
+          }
+        }
+
+        for (i = 0; i < message.length; i++) {
+          for (j = 0; j < message[i].length; j++) {
+            message[i][j] = message[i][j].trim()
+          }
+        }
+
+        for (i = 0; i < message.length; i++) {
+
+          message_text = '';
+
+          message_text = message_obj[message[i][0]]
+
+          if(message[i].length >= 2){
+            message_text = message_text.replace("%1", message[i][1])
+          }
+
+          if(message[i].length >= 3){
+            message_text = message_text.replace("%2", message[i][2])
+          }
+
+          if(message[i].length >= 4){
+            message_text = message_text.replace("%3", message[i][3])
+          }
+          message[i] = message_text
+        }
+        
+        return message.join(" ");
+      }
+
+
       function validateEmail(email) {
         var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         return re.test(email);
@@ -211,7 +272,8 @@
         var notification_key = [];
         var notification_obj = [];
         var results = {total: 0, data: [] };
-        var i;
+        var i, j;
+        
 
         cursor_unread.each(function(err, unread_doc) {
           if (unread_doc != null) {
@@ -230,7 +292,7 @@
               }else{
                 for (i = 0; i < notification_obj.length; i++) {
                   results.data.push({
-                    message: notification_obj[i].bodyShort,
+                    message: renderMessage(notification_obj[i].bodyShort),
                     url: nconf.get('url') + notification_obj[i].path.substring(1)
                   })
                 }
