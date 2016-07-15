@@ -11,6 +11,7 @@
     utils = module.parent.require('../public/src/utils'),
     passport = module.parent.require('passport'),
     IdentSus = require('id-sus-sdk-nodejs'),
+    Categories = module.parent.require('./categories'),
     _ = require('underscore'),
     IdsusStrategy = require('passport-idsus').Strategy,
     nconf = module.parent.require('nconf'),
@@ -79,16 +80,7 @@
       res.set('Content-Type', 'text/javascript');
 
       var IdentSusCfg = IdentSus(config)
-      console.log(config.login_url + "/base/setcookies" )
 
-      request(config.login_url + "/base/setcookies", function (error, response, body) {
-        console.log(error);
-        console.log(response);
-        console.log(body);
-        if (!error && response.statusCode == 200) {
-          console.log(body);
-        }
-      })
 
       if(req.cookies['__susconecta']){
         if(req.user){
@@ -167,30 +159,6 @@
 
     }
 
-    function categories(req, res){
-        var cursor = db.client.collection('objects').find({ _key: { $in: [ /^category/ ] } })
-
-        var content = { total: 0, data: []};
-        var data = []
-
-        cursor.each(function(err, doc) {
-          if (doc != null) {
-            content.total += 1; 
-            data.push(doc);
-          } else {
-            for (var i = 0; i < data.length; i++) {
-              content.data.push({
-                name: data[i].name,
-                description: data[i].description,
-                url: nconf.get('url') + "category/" + data[i].slug
-              })
-            }
-            return res.status(200).json(content);
-          }
-       });
-    }
-
-
     function unreadNotifications(req, res){
       function renderMessage(message){
         var i, j, message_text, 
@@ -252,7 +220,6 @@
         return message.join(" ");
       }
 
-
       function validateEmail(email) {
         var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
         return re.test(email);
@@ -293,7 +260,7 @@
                 for (i = 0; i < notification_obj.length; i++) {
                   results.data.push({
                     message: renderMessage(notification_obj[i].bodyShort),
-                    url: nconf.get('url') + notification_obj[i].path.substring(1)
+                    url: nconf.get('url') + notification_obj[i].path
                   })
                 }
 
@@ -307,14 +274,34 @@
       })
     }
 
+    function categoryRender(req, res){
+      var categoryData;
+
+      async.waterfall([
+        function (next) {
+          Categories.getCategoriesByPrivilege('cid:0:children', req.uid, 'find', next);
+        },
+        function (_categoryData, next) {
+          categoryData = _categoryData;
+
+          var allCategories = [];
+          Categories.flattenCategories(allCategories, categoryData);
+
+          Categories.getRecentTopicReplies(allCategories, req.uid, next);
+        }
+      ], function(err) {
+        return res.status(200).json({total: categoryData.length, data: categoryData});
+      })
+
+    }
+
     params.router.get('/admin/plugins/sso-id-sus', params.middleware.admin.buildHeader, render);
     params.router.get('/api/admin/plugins/sso-id-sus', render);
 
     params.router.get('/auth/idsus/cookie.js', cookieAuth);
     params.router.get('/api/user/interactions/:email', userParticipation);
     params.router.get('/api/user/notifications/:email', unreadNotifications);
-    params.router.get('/api/categories', categories);
-    
+    params.router.get('/api/allcategories', categoryRender);
 
     callback();
   };
