@@ -77,8 +77,6 @@
         api_url: Idsus.settings.apiURL,
       };
       
-      res.set('Content-Type', 'text/javascript');
-
       var IdentSusCfg = IdentSus(config)
 
 
