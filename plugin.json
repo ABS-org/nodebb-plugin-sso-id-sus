@@ -8,7 +8,8 @@
 		{ "hook": "filter:admin.header.build", "method": "addMenuItem" },
 		{ "hook": "filter:auth.list", "method": "getAssociation" },
 		{ "hook": "filter:auth.init", "method": "getStrategy" },
-		{ "hook": "static:app.load", "method": "init" }
+		{ "hook": "static:app.load", "method": "init" },
+		{ "hook": "static:user.loggedOut", "method": "loggedOut" }
 	],
 	"staticDirs": {
 		"static": "./static"

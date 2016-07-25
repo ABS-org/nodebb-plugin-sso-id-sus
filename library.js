@@ -35,7 +35,7 @@
     settings: undefined
   };
 
-  Idsus.loggedOut = function(data){
+  Idsus.loggedOut = function(data, callback){
     var config = {
       client_id: Idsus.settings.id,
       client_secret: Idsus.settings.secret,
@@ -48,18 +48,18 @@
 
     if(data.req.cookies['__susconecta']){
       var cookieSusConecta = JSON.parse(data.req.cookies['__susconecta']);
-
-      IdentSusCfg.logout(cookieSusConecta, function (err, body) {
+      console.log(cookieSusConecta)
+      IdentSusCfg.logout(cookieSusConecta.SID, function (err, body) {
         if(err){
-          res.status(200).json({});  
+          return callback(err)
         }
-
-        res.status(200).json({});  
+        return callback()
 
       })
     }
 
   };
+
 
   Idsus.init = function(params, callback) {
     function render(req, res) {
