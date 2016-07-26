@@ -199,7 +199,7 @@
 
           message_text = '';
 
-          message_text = message_obj[message[i][0]]
+          message_text += message_obj[message[i][0]]
 
           if(message[i].length >= 2){
             message_text = message_text.replace("%1", message[i][1])
