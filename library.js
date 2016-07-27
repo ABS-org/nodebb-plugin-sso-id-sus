@@ -175,7 +175,9 @@
               'notifications:user_posted_topic': "<strong>%1</strong> postou um novo tópico: <strong>%2</strong>",
               'notifications:user_flagged_post_in': "<strong>%1</strong> sinalizou um post em <strong>%2</strong>",
               'notifications:user_flagged_post_in_dual': "<strong>%1</strong> e <strong>%2</strong> sinalizaram um post em <strong>%3</strong>",
-              'notifications:user_flagged_post_in_multiple': "<strong>%1</strong> e %2 outros sinalizaram um post em <strong>%3</strong>"
+              'notifications:user_flagged_post_in_multiple': "<strong>%1</strong> e %2 outros sinalizaram um post em <strong>%3</strong>",
+              'notifications:user_mentioned_you_in': "<strong>%1</strong> mencionou você em <strong>%2</strong>"
+              
             };
  
         message = message.replace(/\[/g, ']')
