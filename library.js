@@ -95,16 +95,18 @@
             var userScope = body.scopeObj;
 
             User.getUidByEmail(userScope.email, function(err, uid) {
-              req.login({uid: uid}, function(err) {
-                if (err) {
-                  return callback(err);
-                }
+              if (err) {
+                return callback(err);
+              }
+              if(uid){
+                req.login({uid: uid}, function(err) {
+                  res.status(200).json({reload: true});
+                });
+              }
 
-                res.status(200).json({reload: true});
-              });
 
             })
-          })
+          })  
         }
       }else{
         if(req.user){
