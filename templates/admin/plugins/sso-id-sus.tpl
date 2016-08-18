@@ -41,12 +41,8 @@
 				<input type="text" name="baseUrl" title="Base Url" class="form-control" placeholder="Base Url">
 			</div>
 			<div class="form-group">
-				<label for="login">Login URL</label>
-				<input type="text" name="loginURL" title="Login URL" class="form-control" placeholder="Login URL">
-			</div>
-			<div class="form-group">
-				<label for="api">API URL</label>
-				<input type="text" name="apiURL" title="Api URL" class="form-control" placeholder="Api URL">
+				<label for="api">Domain URL</label>
+				<input type="text" name="domain" title="Domain URL" class="form-control" placeholder="Api URL">
 			</div>
 			<div class="form-group">
 				<label for="id">Client ID</label>
