@@ -333,8 +333,7 @@
         clientID: Idsus.settings.id,
         clientSecret: Idsus.settings.secret,
         callbackURL: Idsus.settings.baseUrl + '/auth/idsus/callback',
-        loginURL: Idsus.settings.loginURL,
-        apiURL: Idsus.settings.apiURL,
+        domain: Idsus.settings.domain,
       }, function(accessToken, tokenType, expiresIn, refreshToken, scopes, user, done, err) {
         function success(uid) {
           done(null, {
