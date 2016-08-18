@@ -86,23 +86,15 @@
           var identOpt = {origin: 'cookie', sessionid: cookieSusConecta.SID}
 
           IdentSusCfg.getTokenAndScopes(identOpt, function (err, body) {
-            if(err){
-              return callback(err);
-            }
             
             var userScope = body.scopeObj;
 
             User.getUidByEmail(userScope.email, function(err, uid) {
-              if (err) {
-                return callback(err);
-              }
               if(uid){
                 req.login({uid: uid}, function(err) {
                   res.status(200).json({reload: true});
                 });
               }
-
-
             })
           })  
         }
