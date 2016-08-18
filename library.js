@@ -40,8 +40,7 @@
       client_id: Idsus.settings.id,
       client_secret: Idsus.settings.secret,
       redirect_uri: Idsus.settings.baseUrl + '/auth/idsus/callback',
-      login_url: Idsus.settings.loginURL,
-      api_url: Idsus.settings.apiURL,
+      domain: Idsus.settings.domain
     };
 
     var IdentSusCfg = IdentSus(config)
@@ -73,8 +72,7 @@
         client_id: Idsus.settings.id,
         client_secret: Idsus.settings.secret,
         redirect_uri: Idsus.settings.baseUrl + '/auth/idsus/callback',
-        login_url: Idsus.settings.loginURL,
-        api_url: Idsus.settings.apiURL,
+        domain: Idsus.settings.domain
       };
       
       var IdentSusCfg = IdentSus(config)
