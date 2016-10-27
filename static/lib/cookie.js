@@ -11,7 +11,7 @@ function loadDoc(url, cfunc) {
   xhttp.send();
 }
 
-loadDoc("https://login.susconecta.org.br/base/setcookies/", function(data){
+loadDoc("https://login.hmg.susconecta.org.br/base/setcookies/", function(data){
   eval(data.response)
 
   loadDoc("http://comunidades.hmg.susconecta.org.br/auth/idsus/cookie.js", function(data){
